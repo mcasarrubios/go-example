@@ -1,13 +1,14 @@
 package pubsub
 
 type Subscriber interface {
-	Subscribe(topic string) chan interface{}
+	Subscribe(topic string) <-chan interface{}
 	// Unsubscribe(ch chan interface{})
 }
 
 type Publisher interface {
 	Publish(topic string, message interface{})
 	AsSubscriber() Subscriber
+	Shutdown()
 }
 
 type pubSub struct {
@@ -23,15 +24,21 @@ func New() Publisher {
 }
 
 func (p *pubSub) Publish(topic string, message interface{}) {
-	p.register.sendMessage(topic, message)
+	go p.register.sendMessage(topic, message)
 }
 
 func (p *pubSub) AsSubscriber() Subscriber {
 	return p
 }
 
-func (p *pubSub) Subscribe(topic string) chan interface{} {
-	ch := make(chan interface{})
+func (p *pubSub) Shutdown() {
+	for topic := range p.register.getTopics() {
+		p.register.removeTopic(topic)
+	}
+}
+
+func (p *pubSub) Subscribe(topic string) <-chan interface{} {
+	ch := make(chan interface{}, 3)
 	p.register.addChannel(topic, ch)
 	return ch
 }

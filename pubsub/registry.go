@@ -1,13 +1,12 @@
 package pubsub
 
-import "fmt"
-
 // Register channels to topics
 type Register interface {
 	addChannel(topic string, ch chan interface{})
 	sendMessage(topic string, message interface{})
 	removeTopic(topic string)
 	removeChannel(ch chan interface{})
+	getTopics() map[string]map[chan interface{}]bool
 }
 
 type registry struct {
@@ -27,22 +26,44 @@ func (reg *registry) addChannel(topic string, ch chan interface{}) {
 	reg.channels[ch][topic] = true
 }
 func (reg *registry) sendMessage(topic string, message interface{}) {
-	fmt.Printf("--->A0 %v", message)
 	for ch := range reg.topics[topic] {
-		fmt.Printf("--->A1 ")
 		ch <- message
 	}
-	fmt.Printf("--->A3 ")
 }
 func (reg *registry) removeTopic(topic string) {
-	delete(reg.topics, topic)
-	for ch := range reg.channels {
-		delete(reg.channels[ch], topic)
+	for ch := range reg.topics[topic] {
+		reg.remove(topic, ch)
 	}
 }
+
 func (reg *registry) removeChannel(ch chan interface{}) {
-	delete(reg.channels, ch)
-	for topic := range reg.topics {
-		delete(reg.topics[topic], ch)
+	for topic := range reg.channels[ch] {
+		reg.remove(topic, ch)
 	}
+}
+
+func (reg *registry) remove(topic string, ch chan interface{}) {
+	if _, ok := reg.topics[topic]; !ok {
+		return
+	}
+
+	if _, ok := reg.topics[topic][ch]; !ok {
+		return
+	}
+
+	delete(reg.topics[topic], ch)
+	delete(reg.channels[ch], topic)
+
+	if len(reg.topics[topic]) == 0 {
+		delete(reg.topics, topic)
+	}
+
+	if len(reg.channels[ch]) == 0 {
+		close(ch)
+		delete(reg.channels, ch)
+	}
+}
+
+func (reg *registry) getTopics() map[string]map[chan interface{}]bool {
+	return reg.topics
 }
