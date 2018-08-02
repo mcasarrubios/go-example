@@ -28,54 +28,40 @@ func TestAsSubscriberReturnsSuscriber(t *testing.T) {
 func TestSubscribe(t *testing.T) {
 	publisher := New()
 	subscriber := publisher.AsSubscriber()
-	expected := "Awesome message"
+	expected := []string{"Awesome message"}
 	ch := subscriber.Subscribe("Awesome topic")
-	publisher.Publish("Awesome topic", expected)
-	msg := <-ch
-	publisher.Shutdown()
-	if msg.(string) != expected {
-		t.Fatalf("Invalid channel contents: Expected value %v, Current value %v", expected, msg.(string))
-	}
+	publish(&publisher, publishTopic{"Awesome topic", expected})
+	checkContents(t, ch, expected)
 }
 
 func TestMultipleSubscribers(t *testing.T) {
 	publisher := New()
 	subscriber := publisher.AsSubscriber()
-	expected := "Awesome message"
+	expected := []string{"Awesome message"}
 
 	ch1 := subscriber.Subscribe("Awesome topic")
 	ch2 := subscriber.Subscribe("Awesome topic")
 
-	publisher.Publish("Awesome topic", expected)
-
-	msg1 := <-ch1
-	msg2 := <-ch2
-	publisher.Shutdown()
-
-	if msg1.(string) != expected && msg2.(string) != expected {
-		t.Fatalf("Invalid channel contents: Expected value %v, Current values %v, %v", expected, msg1.(string), msg2.(string))
-	}
+	publish(&publisher, publishTopic{"Awesome topic", expected})
+	checkContents(t, ch1, expected)
+	checkContents(t, ch2, expected)
 }
 
 func TestMultipleTopics(t *testing.T) {
 	publisher := New()
 	subscriber := publisher.AsSubscriber()
-	expected1 := "Awesome message 1"
-	expected2 := "Awesome message 2"
+	expected1 := []string{"Awesome message 1", "Awesome message 2"}
+	expected2 := []string{"Awesome message 3", "Awesome message 4"}
 
 	ch1 := subscriber.Subscribe("Awesome topic 1")
 	ch2 := subscriber.Subscribe("Awesome topic 2")
 
-	publisher.Publish("Awesome topic 1", expected1)
-	publisher.Publish("Awesome topic 2", expected2)
+	publish(&publisher,
+		publishTopic{"Awesome topic 1", expected1},
+		publishTopic{"Awesome topic 2", expected2})
 
-	msg1 := <-ch1
-	msg2 := <-ch2
-	publisher.Shutdown()
-
-	if msg1.(string) != expected1 && msg2.(string) != expected2 {
-		t.Fatalf("Invalid channel contents: Expected value %v - %v, Current values %v - %v", expected1, expected2, msg1.(string), msg2.(string))
-	}
+	checkContents(t, ch1, expected1)
+	checkContents(t, ch2, expected2)
 }
 
 func TestMultipleMessagess(t *testing.T) {
