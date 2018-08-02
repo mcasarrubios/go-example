@@ -24,7 +24,7 @@ func New() Publisher {
 }
 
 func (p *pubSub) Publish(topic string, message interface{}) {
-	go p.register.sendMessage(topic, message)
+	p.register.sendMessage(topic, message)
 }
 
 func (p *pubSub) AsSubscriber() Subscriber {

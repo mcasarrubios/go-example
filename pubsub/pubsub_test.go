@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-type publishItem struct {
-	topic string
-	msg   string
+type publishTopic struct {
+	topic    string
+	messages []string
 }
 
 func TestNewReturnsPublisher(t *testing.T) {
@@ -85,30 +85,21 @@ func TestMultipleMessagess(t *testing.T) {
 
 	ch := subscriber.Subscribe("Awesome topic")
 
-	// publish(publisher, publishItem{"Awesome topic", expected[0]}, publishItem{"Awesome topic", expected[1]}, publishItem{"Awesome topic", expected[2]})
-
-	publisher.Publish("Awesome topic", expected[0])
-	publisher.Publish("Awesome topic", expected[1])
-	publisher.Publish("Awesome topic", expected[2])
-
-	publisher.Shutdown()
-	msg := <-ch
-
-	if msg.(string) != expected[0] {
-		t.Fatalf("Invalid channel contents: Expected value %v, Current values %v", expected, msg.(string))
-	}
+	publish(&publisher, publishTopic{"Awesome topic", expected})
+	checkContents(t, ch, expected)
 }
 
-func publish(publisher *Publisher, publishItems ...publishItem) {
-
-	for _, item := range publishItems {
-		publisher.Publish(item.topic, item.msg)
+func publish(publisher *Publisher, topics ...publishTopic) {
+	for _, item := range topics {
+		for _, msg := range item.messages {
+			(*publisher).Publish(item.topic, msg)
+		}
 	}
 
-	publisher.Shutdown()
+	(*publisher).Shutdown()
 }
 
-func checkContents(t *testing.T, ch chan interface{}, vals []string) {
+func checkContents(t *testing.T, ch <-chan interface{}, vals []string) {
 	contents := []string{}
 
 	for v := range ch {
