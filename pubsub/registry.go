@@ -1,5 +1,7 @@
 package pubsub
 
+import "sync"
+
 // Register channels to topics
 type Register interface {
 	addChannel(topic string, ch chan interface{})
@@ -26,9 +28,15 @@ func (reg *registry) addChannel(topic string, ch chan interface{}) {
 	reg.channels[ch][topic] = true
 }
 func (reg *registry) sendMessage(topic string, message interface{}) {
+	var wg sync.WaitGroup
 	for ch := range reg.topics[topic] {
-		ch <- message
+		wg.Add(1)
+		go func(ch chan interface{}, wg *sync.WaitGroup) {
+			wg.Done()
+			ch <- message
+		}(ch, &wg)
 	}
+	wg.Wait()
 }
 func (reg *registry) removeTopic(topic string) {
 	for ch := range reg.topics[topic] {
