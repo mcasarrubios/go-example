@@ -28,6 +28,8 @@ func (reg *registry) addChannel(topic string, ch chan interface{}) {
 	reg.channels[ch][topic] = true
 }
 func (reg *registry) sendMessage(topic string, message interface{}) {
+	// Added Waitgroup to minimize the probability of wrong order of
+	// mesages if sendMessage is called multiple times quickly
 	var wg sync.WaitGroup
 	for ch := range reg.topics[topic] {
 		wg.Add(1)
